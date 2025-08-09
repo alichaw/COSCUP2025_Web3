@@ -1,0 +1,392 @@
+{
+  "name": "COSCUP_test",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ee6edc84-e96a-4e3d-a439-8b954caa6646",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        640,
+        0
+      ],
+      "id": "89809c71-e365-4415-b7b4-8f978d0f0a08",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        96
+      ],
+      "id": "76025770-4427-4b02-bba7-bf987c06cf78"
+    },
+    {
+      "parameters": {
+        "jsCode": "let all = [];\n\nfor (const item of items) {\n  const sigs = item.json.result || [];\n  sigs.forEach(sig => {\n    all.push({\n      signature: sig.signature,\n      blockTime: sig.blockTime,\n      address: item.json.address // 可記錄來源\n    });\n  });\n}\n\nreturn all.map(x => ({ json: x }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        112
+      ],
+      "id": "206e6afe-f186-4673-a52e-273b169ac6c7",
+      "name": "signature"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1248,
+        112
+      ],
+      "id": "0ae3767a-9608-40af-8fda-807033df1c99",
+      "name": "Loop Over Items2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me2",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        128
+      ],
+      "id": "7e6e118a-4293-4420-b246-d9bee10dd7db"
+    },
+    {
+      "parameters": {
+        "jsCode": "let allTxs = [];\n\nfor (const item of items) {\n  allTxs.push(item.json);\n}\n\nreturn [{ json: { allTxs } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        96
+      ],
+      "id": "da832d74-5a44-4e23-a538-8e09f9d5ffa0",
+      "name": "allTxs"
+    },
+    {
+      "parameters": {
+        "url": "https://mainnet.helius-rpc.com/?api-key=c01313dd-3941-4eda-bacb-59c014b4d732",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"getTransaction\",\n  \"params\": [\n    \"{{ $json.signature }}\",\n    {\n      \"encoding\": \"jsonParsed\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1456,
+        128
+      ],
+      "id": "3375bc58-01ba-4a92-8998-d15391c7d544",
+      "name": "getTransaction"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mainnet.helius-rpc.com/?api-key=c01313dd-3941-4eda-bacb-59c014b4d732",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"getSignaturesForAddress\",\n  \"params\": [\n    \"{{ $json.address }}\",\n    {\n      \"limit\": 5\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        848,
+        112
+      ],
+      "id": "c0653829-148e-4d00-ba5d-9c74e7094477",
+      "name": "getSignaturesForAddress"
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3005/richlist",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "24753272-38c7-4046-9d73-ae7657e3fbe7",
+      "name": "richlist"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "alichen308@gmail.com",
+        "subject": "Today's Report",
+        "message": "={{ $json.content.parts[0].text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1424,
+        -176
+      ],
+      "id": "27f38e78-8cc9-4a8b-b0b2-be7e44b5f9a6",
+      "name": "Send a message",
+      "webhookId": "41166316-8492-4aec-8871-4d127db69526",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LNILln9nGpQdCApk",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 優化版本 - 減少 Token 消耗\nlet allTxs = [];\n\nfor (const item of items) {\n  const tx = item.json;\n  \n  if (tx.allTxs && Array.isArray(tx.allTxs)) {\n    for (const transaction of tx.allTxs) {\n      if (transaction.result) {\n        const result = transaction.result;\n        \n        // 只保留關鍵資訊，減少數據量\n        const simplifiedTx = {\n          time: result.blockTime ? new Date(result.blockTime * 1000).toISOString().split('T')[0] : null,\n          success: result.meta?.err === null,\n          fee_sol: (result.meta?.fee || 0) / 1000000000,\n          token_transfers: [],\n          sol_amount: 0\n        };\n        \n        // 簡化的 token 轉移分析\n        if (result.meta?.postTokenBalances?.length > 0) {\n          simplifiedTx.token_transfers = result.meta.postTokenBalances.map(balance => ({\n            amount: parseFloat(balance.uiTokenAmount.uiAmountString),\n            mint: balance.mint.substring(0, 8) + \"...\" // 縮短地址\n          })).slice(0, 3); // 只取前3個\n        }\n        \n        // 簡化的 SOL 轉移\n        if (result.meta?.preBalances && result.meta?.postBalances) {\n          const totalChange = result.meta.postBalances.reduce((sum, bal, i) => \n            sum + Math.abs((bal - result.meta.preBalances[i]) / 1000000000), 0);\n          simplifiedTx.sol_amount = totalChange;\n        }\n        \n        allTxs.push(simplifiedTx);\n      }\n    }\n  }\n}\n\n// 更簡潔的統計\nconst stats = {\n  total: allTxs.length,\n  successful: allTxs.filter(tx => tx.success).length,\n  total_fees: allTxs.reduce((sum, tx) => sum + tx.fee_sol, 0).toFixed(4),\n  unique_tokens: [...new Set(allTxs.flatMap(tx => tx.token_transfers.map(t => t.mint)))].length,\n  avg_sol_per_tx: (allTxs.reduce((sum, tx) => sum + tx.sol_amount, 0) / allTxs.length).toFixed(4)\n};\n\n// 簡化的 AI 提示詞\nreturn [{\n  json: {\n    transactions: allTxs.slice(0, 5), // 只發送前5筆交易\n    statistics: stats,\n    textForAI: `分析 Solana 交易 FOMO 訊號：\n\n統計：總數${stats.total}，成功${stats.successful}，費用${stats.total_fees}SOL，${stats.unique_tokens}種代幣，平均${stats.avg_sol_per_tx}SOL/筆\n\n前5筆交易：${JSON.stringify(allTxs.slice(0, 5), null, 1)}\n\n請簡短回答：FOMO等級(high/medium/low)和原因(50字內)`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        -176
+      ],
+      "id": "6be08ba7-3845-414f-a938-c36322dce68e",
+      "name": "簡化關鍵資訊"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: {\n      address: item.json.address,\n      sol: item.json.sol\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "efc73671-2379-4f87-8df5-a17abd0272a7",
+      "name": "richlist_address"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-flash-latest",
+          "mode": "list",
+          "cachedResultName": "models/gemini-1.5-flash-latest"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=你是一位專業的區塊鏈分析師，專門分析 Solana 鏈上交易數據來識別 FOMO 訊號。\n\n以下是分析數據：\n{{$json.textForAI}}\n\n請以 JSON 格式回答，包含以下欄位：\n{\n  \"fomo_level\": \"high/medium/low\",\n  \"confidence_score\": 0.85,\n  \"reasoning\": \"詳細分析理由\",\n  \"key_indicators\": [\"關鍵指標1\", \"關鍵指標2\"],\n  \"risk_assessment\": \"風險評估\",\n  \"recommended_action\": \"建議行動\"\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        -176
+      ],
+      "id": "a76e12f8-6915-4bdb-8424-f69e1325fef2",
+      "name": "分析",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LZPyNDyRaUJwdcTt",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "richlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "簡化關鍵資訊",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "getSignaturesForAddress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "signature": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [
+          {
+            "node": "allTxs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "getTransaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "allTxs": {
+      "main": [
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "getTransaction": {
+      "main": [
+        [
+          {
+            "node": "Replace Me2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "getSignaturesForAddress": {
+      "main": [
+        [
+          {
+            "node": "signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "richlist": {
+      "main": [
+        [
+          {
+            "node": "richlist_address",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "簡化關鍵資訊": {
+      "main": [
+        [
+          {
+            "node": "分析",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "richlist_address": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "分析": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fd70a02d-1438-4a8d-9623-e24f7dba6e9a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c08623e89fb4854bfdf7e290a5a895d43dc2feab0f1324f9b85808674b7adaf5"
+  },
+  "id": "FH5HYMeziG4Lkiom",
+  "tags": []
+}
